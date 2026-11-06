@@ -1,0 +1,6 @@
+{
+  "name": "FocusStudy - Study Planner & Dashboard",
+  "description": "Comprehensive study planner and task tracker with progress analytics, Pomodoro focus timer, weekly schedule, and local storage data persistence.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

@@ -1,0 +1,859 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FocusStudy - Study Planner & Dashboard</title>
+  <!-- Tailwind CSS CDN for instant styling in VS Code -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: {
+            sans: ['Inter', 'system-ui', 'sans-serif'],
+            mono: ['JetBrains Mono', 'monospace'],
+          }
+        }
+      }
+    }
+  </script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
+</head>
+<body class="bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100 min-h-screen antialiased flex flex-col transition-colors">
+
+  <!-- Top Navigation Bar -->
+  <header class="sticky top-0 z-40 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center gap-3">
+        <div class="w-8 h-8 rounded-lg bg-blue-600 text-white flex items-center justify-center font-bold text-sm shadow-sm">FS</div>
+        <span class="text-lg font-bold tracking-tight text-slate-900 dark:text-slate-100">FocusStudy</span>
+      </div>
+
+      <nav class="flex items-center gap-2">
+        <button id="nav-dashboard-btn" onclick="switchView('dashboard')" class="px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-colors">
+          Dashboard
+        </button>
+        <button id="nav-tasks-btn" onclick="switchView('tasks')" class="px-3 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+          Tasks
+        </button>
+        <button id="nav-subjects-btn" onclick="switchView('subjects')" class="px-3 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+          Subjects
+        </button>
+        <button id="nav-pomodoro-btn" onclick="switchView('pomodoro')" class="px-3 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors">
+          Timer
+        </button>
+      </nav>
+
+      <div class="flex items-center gap-2">
+        <button onclick="openSubjectModal()" class="px-2.5 py-1.5 text-xs font-medium text-slate-700 dark:text-slate-300 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 rounded-md transition-colors" title="Add Subject">
+          + Subject
+        </button>
+        <button onclick="toggleTheme()" class="p-2 text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-md transition-colors" title="Toggle Dark/Light Mode">
+          🌓
+        </button>
+        <button onclick="openTaskModal()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">
+          + New Task
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- Main Viewport -->
+  <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    
+    <!-- DASHBOARD VIEW -->
+    <div id="view-dashboard" class="space-y-8">
+      <!-- Title -->
+      <div class="border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Academic Semester Workbench</div>
+        <h1 class="text-2xl sm:text-3xl font-bold tracking-tight text-slate-900 dark:text-slate-100 mt-1">Study Performance Dashboard</h1>
+      </div>
+
+      <!-- KPI Strip -->
+      <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+          <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Today's Completed Tasks</div>
+          <div class="text-2xl font-bold mt-2 font-mono" id="stat-today-tasks">0 / 3</div>
+          <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div id="stat-today-bar" class="bg-blue-600 h-full rounded-full transition-all" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+          <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Study Hours Logged</div>
+          <div class="text-2xl font-bold mt-2 font-mono text-emerald-600 dark:text-emerald-400" id="stat-hours">0.0h</div>
+          <div class="text-[11px] text-slate-500 mt-2">Tracked via Pomodoro sessions</div>
+        </div>
+
+        <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+          <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Overall Completion Rate</div>
+          <div class="text-2xl font-bold mt-2 font-mono text-violet-600 dark:text-violet-400" id="stat-completion-rate">0%</div>
+          <div class="w-full bg-slate-100 dark:bg-slate-800 h-1.5 rounded-full mt-3 overflow-hidden">
+            <div id="stat-rate-bar" class="bg-violet-600 h-full rounded-full transition-all" style="width: 0%"></div>
+          </div>
+        </div>
+
+        <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+          <div class="text-xs font-medium text-slate-500 dark:text-slate-400">Active Study Streak</div>
+          <div class="text-2xl font-bold mt-2 font-mono text-amber-500" id="stat-streak">5 Days</div>
+          <div class="text-[11px] text-slate-500 mt-2">Consistent daily activity</div>
+        </div>
+      </div>
+
+      <!-- Weekly Activity & Upcoming Deadlines -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- 7-Day Chart -->
+        <div class="lg:col-span-7 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl">
+          <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">7-Day Study Time Log</h2>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mb-6">Minutes studied per day</p>
+          
+          <div id="weekly-bars-container" class="h-44 flex items-end justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-2">
+            <!-- Dynamically populated bars -->
+          </div>
+        </div>
+
+        <!-- Priority Queue -->
+        <div class="lg:col-span-5 p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex flex-col justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Priority Action Queue</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mb-4">Urgent tasks due today or tomorrow</p>
+            <div id="priority-task-list" class="space-y-2.5">
+              <!-- Dynamically populated -->
+            </div>
+          </div>
+          <button onclick="switchView('tasks')" class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-xs font-semibold text-blue-600 dark:text-blue-400 hover:underline">
+            View All Tasks &rarr;
+          </button>
+        </div>
+      </div>
+
+      <!-- Subject Workload & Time Allocation Section on Dashboard -->
+      <div class="p-6 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-base font-semibold text-slate-900 dark:text-slate-100">Course & Subject Workload</h2>
+            <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Study hours and completion metrics by academic subject</p>
+          </div>
+          <button onclick="switchView('subjects')" class="text-xs text-blue-600 dark:text-blue-400 hover:underline font-semibold">
+            Manage Subjects &rarr;
+          </button>
+        </div>
+
+        <!-- Dynamic Subject Cards Grid -->
+        <div id="dashboard-subjects-container" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-2">
+          <!-- Dynamically populated by JS -->
+        </div>
+      </div>
+    </div>
+
+    <!-- SUBJECTS MANAGEMENT VIEW -->
+    <div id="view-subjects" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Subjects & Courses</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Manage your academic subjects, weekly study targets, and color tags</p>
+        </div>
+        <button onclick="openSubjectModal()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">
+          + Add New Subject
+        </button>
+      </div>
+
+      <!-- Quick Add Subject Card -->
+      <div class="p-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+        <h2 class="text-sm font-semibold text-slate-900 dark:text-slate-100">Quick Add Subject</h2>
+        <form onsubmit="handleInlineCreateSubject(event)" class="grid grid-cols-1 sm:grid-cols-4 gap-3 text-xs">
+          <div class="sm:col-span-2">
+            <input type="text" id="inline-sub-name" required placeholder="Subject / Course Name (e.g. Artificial Intelligence)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          </div>
+          <div>
+            <input type="text" id="inline-sub-code" required placeholder="Code (e.g. CS 450)" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg uppercase">
+          </div>
+          <div>
+            <button type="submit" class="w-full py-2 bg-blue-600 hover:bg-blue-700 text-white font-semibold rounded-lg shadow-sm">
+              + Save Subject
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Enrolled Subjects Grid -->
+      <div id="subjects-list-grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- TASKS VIEW -->
+    <div id="view-tasks" class="hidden space-y-6">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-5">
+        <div>
+          <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Task Tracker</h1>
+          <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Filter, track, and complete your course milestones</p>
+        </div>
+        <button onclick="openTaskModal()" class="px-3.5 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-md shadow-sm transition-colors">
+          + Create Task
+        </button>
+      </div>
+
+      <!-- Filters Toolbar -->
+      <div class="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-3">
+        <div class="flex flex-col md:flex-row gap-3">
+          <input type="text" id="task-search-input" oninput="renderTasks()" placeholder="Search tasks by title..." class="flex-1 px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500">
+          
+          <select id="filter-course" onchange="renderTasks()" class="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
+            <!-- Dynamically populated from saved subjects -->
+          </select>
+
+          <select id="filter-status" onchange="renderTasks()" class="px-3 py-1.5 text-xs bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-md">
+            <option value="all">All Statuses</option>
+            <option value="pending">Pending</option>
+            <option value="completed">Completed</option>
+          </select>
+        </div>
+      </div>
+
+      <!-- Tasks List -->
+      <div id="task-list-container" class="space-y-2.5">
+        <!-- Rendered by JS -->
+      </div>
+    </div>
+
+    <!-- POMODORO TIMER VIEW -->
+    <div id="view-pomodoro" class="hidden max-w-2xl mx-auto space-y-6">
+      <div class="text-center">
+        <h1 class="text-2xl font-bold tracking-tight text-slate-900 dark:text-slate-100">Pomodoro Study Timer</h1>
+        <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Stay focused with structured study intervals</p>
+      </div>
+
+      <div class="p-8 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-center shadow-sm">
+        <div class="inline-flex p-1 bg-slate-100 dark:bg-slate-800 rounded-lg mb-6">
+          <button onclick="setTimerMode(25)" id="btn-mode-25" class="px-4 py-1.5 text-xs font-semibold rounded-md bg-white dark:bg-slate-900 text-blue-600 shadow-sm">Focus (25m)</button>
+          <button onclick="setTimerMode(5)" id="btn-mode-5" class="px-4 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400">Break (5m)</button>
+          <button onclick="setTimerMode(15)" id="btn-mode-15" class="px-4 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400">Long Rest (15m)</button>
+        </div>
+
+        <div class="font-mono text-7xl font-bold tracking-tight text-slate-900 dark:text-slate-100 my-6" id="timer-display">
+          25:00
+        </div>
+
+        <div class="flex items-center justify-center gap-3">
+          <button onclick="resetTimer()" class="px-4 py-2 text-xs font-medium border border-slate-200 dark:border-slate-700 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+            Reset
+          </button>
+          <button onclick="toggleTimer()" id="btn-timer-toggle" class="px-8 py-2.5 text-sm font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow transition-colors">
+            Start Focus
+          </button>
+          <button onclick="finishSession()" class="px-4 py-2 text-xs font-medium text-emerald-600 border border-emerald-200 dark:border-emerald-800 rounded-lg hover:bg-emerald-50 dark:hover:bg-emerald-950/40">
+            Log Session
+          </button>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- MODAL: ADD / EDIT SUBJECT -->
+  <div id="subject-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+        <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">Add New Subject</h2>
+        <button onclick="closeSubjectModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form onsubmit="handleModalCreateSubject(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Subject Name *</label>
+          <input type="text" id="submodal-name" required placeholder="e.g. Cognitive Psychology" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Course Code *</label>
+            <input type="text" id="submodal-code" required placeholder="e.g. PSYC 330" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg uppercase">
+          </div>
+          <div>
+            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Weekly Target (Hours)</label>
+            <input type="number" id="submodal-hours" value="4" min="1" max="40" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono">
+          </div>
+        </div>
+
+        <div>
+          <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1.5">Color Tag</label>
+          <div class="flex items-center gap-2" id="color-picker-container">
+            <!-- Palette dots generated by JS -->
+          </div>
+          <input type="hidden" id="submodal-color" value="#3b82f6">
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="closeSubjectModal()" class="px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+          <button type="submit" class="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">Save Subject</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <!-- MODAL: ADD TASK -->
+  <div id="task-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
+    <div class="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl w-full max-w-md p-6 shadow-xl space-y-4">
+      <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
+        <h2 class="text-base font-bold text-slate-900 dark:text-slate-100">Add Study Task</h2>
+        <button onclick="closeTaskModal()" class="text-slate-400 hover:text-slate-600 text-lg">&times;</button>
+      </div>
+
+      <form onsubmit="handleCreateTask(event)" class="space-y-3 text-xs">
+        <div>
+          <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Task Title *</label>
+          <input type="text" id="modal-title" required placeholder="e.g. Complete Calculus Problem Set" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <div class="flex items-center justify-between mb-1">
+              <label class="font-medium text-slate-700 dark:text-slate-300">Course / Subject *</label>
+              <button type="button" onclick="openSubjectModal()" class="text-[10px] text-blue-600 dark:text-blue-400 hover:underline">+ New</button>
+            </div>
+            <select id="modal-course" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+              <!-- Dynamically populated from saved subjects -->
+            </select>
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Priority</label>
+            <select id="modal-priority" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+              <option value="high">High</option>
+              <option value="medium" selected>Medium</option>
+              <option value="low">Low</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <div>
+            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Due Date *</label>
+            <input type="date" id="modal-date" required class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg">
+          </div>
+
+          <div>
+            <label class="block font-medium text-slate-700 dark:text-slate-300 mb-1">Est. Duration (min)</label>
+            <input type="number" id="modal-duration" value="45" min="10" max="300" class="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono">
+          </div>
+        </div>
+
+        <div class="flex justify-end gap-2 pt-3 border-t border-slate-100 dark:border-slate-800">
+          <button type="button" onclick="closeTaskModal()" class="px-4 py-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">Cancel</button>
+          <button type="submit" class="px-4 py-2 font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm">Save Task</button>
+        </div>
+      </form>
+    </div>
+  </div>
+
+  <script>
+// LocalStorage Keys
+const STORAGE_KEY = 'focusstudy_standalone_tasks';
+const SESSIONS_KEY = 'focusstudy_standalone_sessions';
+const SUBJECTS_KEY = 'focusstudy_standalone_subjects';
+
+// Default Subjects
+const defaultSubjects = [
+  { id: 'sub-cs', name: 'Data Structures & Algorithms', code: 'CS 201', color: '#3b82f6', targetHours: 6 },
+  { id: 'sub-math', name: 'Calculus & Linear Algebra', code: 'MATH 210', color: '#8b5cf6', targetHours: 5 },
+  { id: 'sub-bio', name: 'Molecular Biology', code: 'BIO 102', color: '#10b981', targetHours: 4 },
+  { id: 'sub-psyc', name: 'Cognitive Neuroscience', code: 'PSYC 330', color: '#f59e0b', targetHours: 3 },
+  { id: 'sub-econ', name: 'Microeconomics', code: 'ECON 101', color: '#06b6d4', targetHours: 3 }
+];
+
+// Color Palette for Subjects
+const COLOR_PALETTE = ['#3b82f6', '#8b5cf6', '#10b981', '#f59e0b', '#06b6d4', '#ec4899', '#f43f5e', '#6366f1'];
+
+// Default Tasks
+const defaultTasks = [
+  { id: '1', title: 'Complete Dynamic Programming Worksheet', course: 'CS 201', priority: 'high', dueDate: new Date().toISOString().slice(0, 10), duration: 60, completed: false },
+  { id: '2', title: 'Read Chapter 4: Synaptic Neurotransmission', course: 'PSYC 330', priority: 'medium', dueDate: new Date().toISOString().slice(0, 10), duration: 45, completed: false },
+  { id: '3', title: 'Calculus Problem Set: Eigenvalues & Diagonalization', course: 'MATH 210', priority: 'high', dueDate: new Date(Date.now() + 86400000).toISOString().slice(0, 10), duration: 90, completed: false },
+  { id: '4', title: 'Biology Lab Report: Enzyme Kinetics', course: 'BIO 102', priority: 'medium', dueDate: new Date(Date.now() + 172800000).toISOString().slice(0, 10), duration: 75, completed: false },
+  { id: '5', title: 'Binary Search Tree Balancing Practice', course: 'CS 201', priority: 'medium', dueDate: new Date().toISOString().slice(0, 10), duration: 45, completed: true }
+];
+
+// State
+let subjects = JSON.parse(localStorage.getItem(SUBJECTS_KEY)) || defaultSubjects;
+let tasks = JSON.parse(localStorage.getItem(STORAGE_KEY)) || defaultTasks;
+let sessions = JSON.parse(localStorage.getItem(SESSIONS_KEY)) || [
+  { date: new Date().toISOString().slice(0, 10), minutes: 50, course: 'CS 201' },
+  { date: new Date(Date.now() - 86400000).toISOString().slice(0, 10), minutes: 75, course: 'MATH 210' },
+  { date: new Date(Date.now() - 172800000).toISOString().slice(0, 10), minutes: 90, course: 'CS 201' },
+  { date: new Date(Date.now() - 259200000).toISOString().slice(0, 10), minutes: 60, course: 'BIO 102' }
+];
+
+// Persistence
+function saveSubjects() {
+  localStorage.setItem(SUBJECTS_KEY, JSON.stringify(subjects));
+  populateSubjectDropdowns();
+  renderSubjects();
+  renderDashboard();
+  renderTasks();
+}
+
+function saveTasks() {
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(tasks));
+  renderDashboard();
+  renderTasks();
+}
+
+function saveSessions() {
+  localStorage.setItem(SESSIONS_KEY, JSON.stringify(sessions));
+  renderDashboard();
+}
+
+// Navigation View Switching
+function switchView(view) {
+  ['dashboard', 'tasks', 'subjects', 'pomodoro'].forEach(v => {
+    const el = document.getElementById(`view-${v}`);
+    if (el) el.classList.add('hidden');
+    const btn = document.getElementById(`nav-${v}-btn`);
+    if (btn) {
+      if (v === view) {
+        btn.className = 'px-3 py-1.5 text-xs font-semibold rounded-md bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white transition-colors';
+      } else {
+        btn.className = 'px-3 py-1.5 text-xs font-medium rounded-md text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors';
+      }
+    }
+  });
+
+  const activeEl = document.getElementById(`view-${view}`);
+  if (activeEl) activeEl.classList.remove('hidden');
+}
+
+// Theme Toggle
+function toggleTheme() {
+  document.documentElement.classList.toggle('dark');
+}
+
+// Subject Management
+function openSubjectModal() {
+  document.getElementById('submodal-name').value = '';
+  document.getElementById('submodal-code').value = '';
+  document.getElementById('submodal-hours').value = '4';
+  selectColor(COLOR_PALETTE[0]);
+  document.getElementById('subject-modal').classList.remove('hidden');
+}
+
+function closeSubjectModal() {
+  document.getElementById('subject-modal').classList.add('hidden');
+}
+
+function selectColor(colorHex) {
+  document.getElementById('submodal-color').value = colorHex;
+  renderColorPalette(colorHex);
+}
+
+function renderColorPalette(activeColor) {
+  const container = document.getElementById('color-picker-container');
+  if (!container) return;
+  container.innerHTML = COLOR_PALETTE.map(c => `
+    <button type="button" onclick="selectColor('${c}')" style="background-color: ${c}" class="w-6 h-6 rounded-full transition-transform ${c === activeColor ? 'ring-2 ring-slate-400 scale-110' : 'opacity-80 hover:opacity-100'}"></button>
+  `).join('');
+}
+
+function handleModalCreateSubject(e) {
+  e.preventDefault();
+  const name = document.getElementById('submodal-name').value.trim();
+  const code = document.getElementById('submodal-code').value.trim().toUpperCase();
+  const hours = Number(document.getElementById('submodal-hours').value) || 4;
+  const color = document.getElementById('submodal-color').value || COLOR_PALETTE[0];
+
+  if (!name || !code) return;
+
+  const newSubject = {
+    id: `sub-${Date.now()}`,
+    name,
+    code,
+    color,
+    targetHours: hours
+  };
+
+  subjects.push(newSubject);
+  saveSubjects();
+  closeSubjectModal();
+
+  // If task modal was open, auto-select the newly created subject
+  const modalCourse = document.getElementById('modal-course');
+  if (modalCourse) {
+    modalCourse.value = code;
+  }
+}
+
+function handleInlineCreateSubject(e) {
+  e.preventDefault();
+  const name = document.getElementById('inline-sub-name').value.trim();
+  const code = document.getElementById('inline-sub-code').value.trim().toUpperCase();
+  if (!name || !code) return;
+
+  const randomColor = COLOR_PALETTE[subjects.length % COLOR_PALETTE.length];
+  const newSubject = {
+    id: `sub-${Date.now()}`,
+    name,
+    code,
+    color: randomColor,
+    targetHours: 4
+  };
+
+  subjects.push(newSubject);
+  saveSubjects();
+  document.getElementById('inline-sub-name').value = '';
+  document.getElementById('inline-sub-code').value = '';
+}
+
+function deleteSubject(subId) {
+  if (subjects.length <= 1) {
+    alert('You must keep at least one subject in the system.');
+    return;
+  }
+  const sub = subjects.find(s => s.id === subId);
+  if (confirm(`Delete subject "${sub?.name || sub?.code}"? Existing tasks will remain.`)) {
+    subjects = subjects.filter(s => s.id !== subId);
+    saveSubjects();
+  }
+}
+
+function populateSubjectDropdowns() {
+  const taskCourseSelect = document.getElementById('modal-course');
+  const filterCourseSelect = document.getElementById('filter-course');
+
+  if (taskCourseSelect) {
+    const currentVal = taskCourseSelect.value;
+    taskCourseSelect.innerHTML = subjects.map(s => `
+      <option value="${s.code}">${s.code} - ${s.name}</option>
+    `).join('');
+    if (subjects.some(s => s.code === currentVal)) {
+      taskCourseSelect.value = currentVal;
+    }
+  }
+
+  if (filterCourseSelect) {
+    const currentFilter = filterCourseSelect.value;
+    filterCourseSelect.innerHTML = `<option value="all">All Courses</option>` + subjects.map(s => `
+      <option value="${s.code}">${s.code} - ${s.name}</option>
+    `).join('');
+    filterCourseSelect.value = currentFilter;
+  }
+}
+
+function renderSubjects() {
+  const container = document.getElementById('subjects-list-grid');
+  if (!container) return;
+
+  if (subjects.length === 0) {
+    container.innerHTML = '<div class="col-span-3 text-center text-xs text-slate-400 py-8">No subjects saved. Click "+ Add New Subject" above.</div>';
+    return;
+  }
+
+  container.innerHTML = subjects.map(sub => {
+    const subTasks = tasks.filter(t => t.course === sub.code);
+    const completedTasks = subTasks.filter(t => t.completed).length;
+
+    return `
+      <div class="p-4 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shadow-sm flex flex-col justify-between">
+        <div>
+          <div class="flex items-start justify-between gap-2">
+            <div class="flex items-center gap-2">
+              <span class="w-3 h-3 rounded-full shrink-0" style="background-color: ${sub.color}"></span>
+              <span class="font-mono text-xs font-bold text-slate-900 dark:text-slate-100">${sub.code}</span>
+            </div>
+            ${subjects.length > 1 ? `
+              <button onclick="deleteSubject('${sub.id}')" title="Delete Subject" class="text-slate-400 hover:text-rose-500 text-xs p-1">
+                ✕
+              </button>
+            ` : ''}
+          </div>
+          <h3 class="text-xs font-semibold text-slate-800 dark:text-slate-200 mt-2 truncate">${sub.name}</h3>
+        </div>
+
+        <div class="mt-4 pt-3 border-t border-slate-100 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
+          <span>Target: <strong class="text-slate-700 dark:text-slate-300 font-mono">${sub.targetHours}h</strong>/wk</span>
+          <span>Tasks: <strong class="text-slate-700 dark:text-slate-300 font-mono">${completedTasks}/${subTasks.length}</strong></span>
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+// Render Dashboard (Metrics, 7-Day Chart, Priority Queue, and Subjects Workload)
+function renderDashboard() {
+  const todayStr = new Date().toISOString().slice(0, 10);
+  const todayTasks = tasks.filter(t => t.dueDate === todayStr);
+  const todayCompleted = todayTasks.filter(t => t.completed).length;
+
+  document.getElementById('stat-today-tasks').innerText = `${todayCompleted} / ${Math.max(3, todayTasks.length)}`;
+  const todayPct = todayTasks.length > 0 ? (todayCompleted / todayTasks.length) * 100 : 0;
+  document.getElementById('stat-today-bar').style.width = `${todayPct}%`;
+
+  const totalMinutes = sessions.reduce((acc, s) => acc + s.minutes, 0);
+  document.getElementById('stat-hours').innerText = `${(totalMinutes / 60).toFixed(1)}h`;
+
+  const completedCount = tasks.filter(t => t.completed).length;
+  const ratePct = tasks.length > 0 ? Math.round((completedCount / tasks.length) * 100) : 0;
+  document.getElementById('stat-completion-rate').innerText = `${ratePct}%`;
+  document.getElementById('stat-rate-bar').style.width = `${ratePct}%`;
+
+  // 7-Day Chart
+  const barsContainer = document.getElementById('weekly-bars-container');
+  if (barsContainer) {
+    barsContainer.innerHTML = '';
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dStr = d.toISOString().slice(0, 10);
+      const dayMinutes = sessions.filter(s => s.date === dStr).reduce((acc, s) => acc + s.minutes, 0);
+
+      const barCol = document.createElement('div');
+      barCol.className = 'flex-1 flex flex-col items-center gap-1.5 h-full justify-end';
+      const barHeight = Math.max(8, Math.min(100, (dayMinutes / 120) * 100));
+      barCol.innerHTML = `
+        <div title="${dayMinutes} mins" style="height: ${dayMinutes === 0 ? 4 : barHeight}%" class="w-full max-w-[32px] rounded-t ${dayMinutes > 0 ? 'bg-blue-600' : 'bg-slate-200 dark:bg-slate-800'}"></div>
+        <span class="text-[10px] font-medium text-slate-500">${days[d.getDay()]}</span>
+      `;
+      barsContainer.appendChild(barCol);
+    }
+  }
+
+  // Priority Tasks List
+  const priorityContainer = document.getElementById('priority-task-list');
+  if (priorityContainer) {
+    const pendingTasks = tasks.filter(t => !t.completed).slice(0, 3);
+    if (pendingTasks.length === 0) {
+      priorityContainer.innerHTML = '<div class="text-xs text-slate-400 py-4 text-center">No urgent tasks pending!</div>';
+    } else {
+      priorityContainer.innerHTML = pendingTasks.map(t => {
+        const sub = subjects.find(s => s.code === t.course);
+        return `
+          <div class="p-2.5 rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-850 flex items-center justify-between text-xs">
+            <div class="flex items-center gap-2">
+              <button onclick="toggleTask('${t.id}')" class="w-4 h-4 rounded border border-slate-300 dark:border-slate-600 hover:border-emerald-500"></button>
+              <div>
+                <div class="font-medium text-slate-900 dark:text-slate-100 truncate max-w-[180px]">${t.title}</div>
+                <div class="text-[10px] text-slate-500 flex items-center gap-1 mt-0.5">
+                  <span class="font-semibold" style="color: ${sub?.color || '#3b82f6'}">${t.course}</span>
+                  <span>·</span>
+                  <span>${t.duration}m</span>
+                </div>
+              </div>
+            </div>
+            <span class="text-[10px] font-semibold text-rose-500 uppercase">${t.priority}</span>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+
+  // Dashboard Subjects Workload Section
+  const dashboardSubjectsContainer = document.getElementById('dashboard-subjects-container');
+  if (dashboardSubjectsContainer) {
+    if (subjects.length === 0) {
+      dashboardSubjectsContainer.innerHTML = '<div class="col-span-3 text-xs text-slate-400 py-4">No subjects added yet.</div>';
+    } else {
+      dashboardSubjectsContainer.innerHTML = subjects.map(sub => {
+        const subTasks = tasks.filter(t => t.course === sub.code);
+        const completedTasks = subTasks.filter(t => t.completed).length;
+        // Calculate estimated hours for this subject
+        const estMinutes = subTasks.reduce((acc, t) => acc + (t.duration || 0), 0);
+        const estHours = (estMinutes / 60).toFixed(1);
+        const targetHours = sub.targetHours || 4;
+        const progressPct = Math.min(100, Math.round((Number(estHours) / targetHours) * 100));
+
+        return `
+          <div class="p-3.5 rounded-lg border border-slate-100 dark:border-slate-800 bg-slate-50/60 dark:bg-slate-850/60 flex flex-col justify-between">
+            <div>
+              <div class="flex items-center justify-between">
+                <div class="flex items-center gap-1.5 min-w-0">
+                  <span class="w-2.5 h-2.5 rounded-full shrink-0" style="background-color: ${sub.color}"></span>
+                  <span class="text-xs font-semibold text-slate-900 dark:text-slate-100 truncate">${sub.name}</span>
+                </div>
+                <span class="text-[10px] font-mono font-bold text-slate-500 dark:text-slate-400">${sub.code}</span>
+              </div>
+              <div class="mt-2 text-[11px] text-slate-500 flex items-center justify-between">
+                <span>Tasks: <strong class="text-slate-700 dark:text-slate-300 font-mono">${completedTasks}/${subTasks.length}</strong></span>
+                <span>Goal: <strong class="text-slate-700 dark:text-slate-300 font-mono">${targetHours}h</strong>/wk</span>
+              </div>
+            </div>
+            <div class="mt-2.5 w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+              <div class="h-full rounded-full transition-all" style="width: ${progressPct}%; background-color: ${sub.color}"></div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+  }
+}
+
+// Task Tracker Actions
+function toggleTask(id) {
+  tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+  saveTasks();
+}
+
+function deleteTask(id) {
+  tasks = tasks.filter(t => t.id !== id);
+  saveTasks();
+}
+
+function openTaskModal() {
+  document.getElementById('modal-date').value = new Date().toISOString().slice(0, 10);
+  populateSubjectDropdowns();
+  document.getElementById('task-modal').classList.remove('hidden');
+}
+
+function closeTaskModal() {
+  document.getElementById('task-modal').classList.add('hidden');
+}
+
+function handleCreateTask(e) {
+  e.preventDefault();
+  const newTask = {
+    id: String(Date.now()),
+    title: document.getElementById('modal-title').value.trim(),
+    course: document.getElementById('modal-course').value || (subjects[0] ? subjects[0].code : 'General'),
+    priority: document.getElementById('modal-priority').value,
+    dueDate: document.getElementById('modal-date').value,
+    duration: Number(document.getElementById('modal-duration').value) || 30,
+    completed: false
+  };
+  tasks.unshift(newTask);
+  saveTasks();
+  closeTaskModal();
+  document.getElementById('modal-title').value = '';
+}
+
+// Render Tasks List with Subject Color Badges
+function renderTasks() {
+  const container = document.getElementById('task-list-container');
+  if (!container) return;
+
+  const q = (document.getElementById('task-search-input')?.value || '').toLowerCase();
+  const courseFilter = document.getElementById('filter-course')?.value || 'all';
+  const statusFilter = document.getElementById('filter-status')?.value || 'all';
+
+  const filtered = tasks.filter(t => {
+    if (q && !t.title.toLowerCase().includes(q)) return false;
+    if (courseFilter !== 'all' && t.course !== courseFilter) return false;
+    if (statusFilter === 'pending' && t.completed) return false;
+    if (statusFilter === 'completed' && !t.completed) return false;
+    return true;
+  });
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="p-8 text-center text-xs text-slate-400 bg-white dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-800">No tasks found.</div>';
+    return;
+  }
+
+  container.innerHTML = filtered.map(t => {
+    const sub = subjects.find(s => s.code === t.course);
+    const subColor = sub?.color || '#3b82f6';
+
+    return `
+      <div class="p-4 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl flex items-center justify-between gap-3 ${t.completed ? 'opacity-60' : ''}">
+        <div class="flex items-center gap-3">
+          <button onclick="toggleTask('${t.id}')" class="w-5 h-5 rounded border flex items-center justify-center ${t.completed ? 'bg-emerald-600 border-emerald-600 text-white' : 'border-slate-300 dark:border-slate-600'}">
+            ${t.completed ? '&#10003;' : ''}
+          </button>
+          <div>
+            <div class="text-xs font-semibold ${t.completed ? 'line-through text-slate-400' : 'text-slate-900 dark:text-slate-100'}">${t.title}</div>
+            <div class="text-[11px] text-slate-500 flex items-center gap-2 mt-0.5">
+              <span class="font-medium inline-flex items-center gap-1" style="color: ${subColor}">
+                <span class="w-2 h-2 rounded-full inline-block" style="background-color: ${subColor}"></span>
+                <span>${t.course}</span>
+              </span>
+              <span>·</span>
+              <span>Due: ${t.dueDate}</span>
+              <span>·</span>
+              <span>${t.duration}m</span>
+              <span>·</span>
+              <span class="uppercase text-[10px] font-semibold ${t.priority === 'high' ? 'text-rose-500' : t.priority === 'medium' ? 'text-amber-500' : 'text-slate-400'}">${t.priority}</span>
+            </div>
+          </div>
+        </div>
+        <button onclick="deleteTask('${t.id}')" class="text-slate-400 hover:text-rose-500 p-1 text-xs" title="Delete">✕</button>
+      </div>
+    `;
+  }).join('');
+}
+
+// Pomodoro Timer
+let timerDuration = 25 * 60;
+let timerRemaining = 25 * 60;
+let timerInterval = null;
+
+function updateTimerDisplay() {
+  const mins = Math.floor(timerRemaining / 60);
+  const secs = timerRemaining % 60;
+  document.getElementById('timer-display').innerText = `${String(mins).padStart(2, '0')}:${String(secs).padStart(2, '0')}`;
+}
+
+function setTimerMode(mins) {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  document.getElementById('btn-timer-toggle').innerText = 'Start Focus';
+  timerDuration = mins * 60;
+  timerRemaining = timerDuration;
+  updateTimerDisplay();
+}
+
+function toggleTimer() {
+  const btn = document.getElementById('btn-timer-toggle');
+  if (timerInterval) {
+    clearInterval(timerInterval);
+    timerInterval = null;
+    btn.innerText = 'Start Focus';
+  } else {
+    btn.innerText = 'Pause';
+    timerInterval = setInterval(() => {
+      if (timerRemaining <= 1) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+        btn.innerText = 'Start Focus';
+        finishSession();
+      } else {
+        timerRemaining--;
+        updateTimerDisplay();
+      }
+    }, 1000);
+  }
+}
+
+function resetTimer() {
+  clearInterval(timerInterval);
+  timerInterval = null;
+  timerRemaining = timerDuration;
+  document.getElementById('btn-timer-toggle').innerText = 'Start Focus';
+  updateTimerDisplay();
+}
+
+function finishSession() {
+  const elapsed = Math.max(1, Math.round((timerDuration - timerRemaining) / 60));
+  sessions.unshift({
+    date: new Date().toISOString().slice(0, 10),
+    minutes: elapsed || 25,
+    course: subjects[0] ? subjects[0].code : 'General'
+  });
+  saveSessions();
+  resetTimer();
+  alert(`Well done! Logged ${elapsed || 25} minutes of study.`);
+}
+
+// Initialization on DOM Load
+document.addEventListener('DOMContentLoaded', () => {
+  document.documentElement.classList.add('dark');
+  renderColorPalette(COLOR_PALETTE[0]);
+  populateSubjectDropdowns();
+  renderSubjects();
+  renderDashboard();
+  renderTasks();
+});
+
+</script>
+</body>
+</html>
